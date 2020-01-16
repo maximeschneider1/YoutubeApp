@@ -4,9 +4,10 @@ import (
 	"YSS/config"
 	"fmt"
 	"golang.org/x/oauth2"
-	"io/ioutil"
 	"net/http"
 )
+
+var currentToken string
 
 // HandleGoogleLogin builds and redirects a temporary URL to the Google consent page
 // that asks for permissions for the required scopes explicitly
@@ -19,7 +20,7 @@ func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 // Google POST back OAuth2 code we exchange for access token we'll use for requests to Google
 func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.FormValue("state")
-	w.Write([]byte(fmt.Sprintf("state is %s",state)))
+	//w.Write([]byte(fmt.Sprintf("state is %s",state)))
 	if state != config.OauthStateString {
 		fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", config.OauthStateString, state)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -34,20 +35,10 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//response, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	currentToken = token.AccessToken
 
-	querybuild := fmt.Sprintf("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=50&mine=true", token.AccessToken)
-	response2, err := http.Get(querybuild)
+	fmt.Fprintf(w, htmlHome)
 
-	//defer response.Body.Close()
-	defer response2.Body.Close()
-	//contents, err := ioutil.ReadAll(response.Body)
-	//fmt.Fprintf(w, "\n \n Content: %s\n", contents)
 
-	contents2, err := ioutil.ReadAll(response2.Body)
-	fmt.Fprintf(w, "\n \n Content: %s\n", contents2)
 
 }
-
-
-
