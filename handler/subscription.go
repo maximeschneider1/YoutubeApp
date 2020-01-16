@@ -14,27 +14,27 @@ type Page struct {
 	AllSubscription []*payload.Channel
 }
 
-func HandlePageOne(w http.ResponseWriter, r *http.Request) {
-
+func HandlePage(w http.ResponseWriter, r *http.Request) {
 	var page Page
-
 	subscriptions, err := querySubscription()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
 	for _, p := range subscriptions.Items {
+
 		c := &payload.Channel{}
+
 		c, err := c.GetItemInfo(p); if err != nil {
 			fmt.Println(err.Error())
 		}
 		page.AllSubscription = append(page.AllSubscription, c)
 	}
 
- 	t, err := getTemplateHTML("page.html"); if err != nil {
+ 	t, err := getTemplateHTML("./html/page.html"); if err != nil {
  		fmt.Println(err.Error())
 	}
-	t2, err := getTemplateHTML("page2.html"); if err != nil {
+	t2, err := getTemplateHTML("./html/page2.html"); if err != nil {
 		fmt.Println(err.Error())
 	}
 
@@ -43,7 +43,6 @@ func HandlePageOne(w http.ResponseWriter, r *http.Request) {
 	t2.Execute(w, page.AllSubscription[1])
 
 }
-
 
 
 func getTemplateHTML(filePath string) (*template.Template, error) {

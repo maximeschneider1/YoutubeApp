@@ -12,8 +12,9 @@ type Channel struct {
 	Thumbnail string
 }
 
-//VideoInfo regroups all methods to get video info from Youtube API response
-type VideoInfo interface {
+//InfoFetcher regroups all methods to get video info from Youtube API response.
+// This interface regroups all behaviours of Channel object
+type InfoFetcher interface {
 	GetItemInfo(payload model.Item) (*Channel, error)
 
 	GetID(p model.Item) (string, error)
@@ -22,7 +23,7 @@ type VideoInfo interface {
 	GetThumbnail(p model.Item) (string, error)
 }
 
-
+//GetItemInfo gets Channel infos from the Google response
 func (c *Channel)GetItemInfo(payload model.Item) (*Channel, error) {
 	var err error
 	c.ID, err = c.GetID(payload)
