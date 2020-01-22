@@ -11,19 +11,53 @@ import (
 )
 
 type Page struct {
-	AllSubscription []*payload.Channel
+	AllSubscription []*payload.User
+	AllVideosFromUser []*payload.Video
 }
 
 func HandlePage(w http.ResponseWriter, r *http.Request) {
+	// Query result to the Youtube API
 	var page Page
 	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&mine=true")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	for _, p := range subscriptions.Items {
+	vidQuery := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?access_token=%v&channelId=UCC9mlCpyisiIpp9YA9xV-QA&part=snippet,id&maxResults=20", currentToken)
 
-		c := &payload.Channel{}
+	response2, err := http.Get(vidQuery)
+	defer response2.Body.Close()
+	content2, err := ioutil.ReadAll(response2.Body)
+	fmt.Printf("%#v",  string(content2))
+
+
+	// Range over response items
+	for _, p := range subscriptions.Items {
+		c := &payload.User{}
+		c, err = c.GetItemInfo(p); if err != nil {
+			fmt.Println(err.Error())
+		}
+		page.AllSubscription = append(page.AllSubscription, c)
+	}
+
+	// Render results
+	t, err := getTemplateHTML("./html/page.html"); if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Fprintf(w, htmlHome)
+	t.Execute(w, page.AllSubscription)
+}
+
+
+func HandleNextPage(w http.ResponseWriter, r *http.Request) {
+	var page Page
+	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&pageToken=CAoQAA&mine=true")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	for _, p := range subscriptions.Items {
+		c := &payload.User{}
 
 		c, err := c.GetItemInfo(p); if err != nil {
 			fmt.Println(err.Error())
@@ -31,13 +65,11 @@ func HandlePage(w http.ResponseWriter, r *http.Request) {
 		page.AllSubscription = append(page.AllSubscription, c)
 	}
 
- 	t, err := getTemplateHTML("./html/page.html"); if err != nil {
- 		fmt.Println(err.Error())
+	t, err := getTemplateHTML("./html/page.html"); if err != nil {
+		fmt.Println(err.Error())
 	}
-
 	fmt.Fprintf(w, htmlHome)
 	t.Execute(w, page.AllSubscription)
-
 }
 
 
@@ -50,9 +82,9 @@ func getTemplateHTML(filePath string) (*template.Template, error) {
 }
 
 func querySubscription(query string) (model.Payload, error) {
-	querybuild := fmt.Sprintf(query, currentToken)
+	queryBuild := fmt.Sprintf(query, currentToken)
 
-	response, err := http.Get(querybuild); if err != nil {
+	response, err := http.Get(queryBuild); if err != nil {
 		return model.Payload{}, err
 	}
 
@@ -64,32 +96,3 @@ func querySubscription(query string) (model.Payload, error) {
 	}
 	return result, nil
 }
-
-func HandlePageTwo(w http.ResponseWriter, r *http.Request) {
-	var page Page
-	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&pageToken=CAoQAA&mine=true")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	for _, p := range subscriptions.Items {
-
-		c := &payload.Channel{}
-
-		c, err := c.GetItemInfo(p); if err != nil {
-			fmt.Println(err.Error())
-		}
-		page.AllSubscription = append(page.AllSubscription, c)
-	}
-
-	t, err := getTemplateHTML("./html/page.html"); if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	fmt.Fprintf(w, htmlHome)
-	t.Execute(w, page.AllSubscription)
-}
-
-
-
-

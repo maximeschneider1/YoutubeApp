@@ -1,0 +1,7 @@
+<h1> </h1>
+{{ range .}}
+    <div>
+        <img src={{.Thumbnail}} height="42" width="42">
+        <p> <a href={{.URL}} target="_blank">{{.Title}}</a></p>
+    </div>
+{{end}}

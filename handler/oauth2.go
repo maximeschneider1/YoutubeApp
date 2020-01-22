@@ -38,7 +38,4 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	currentToken = token.AccessToken
 
 	fmt.Fprintf(w, htmlHome)
-
-
-
 }
