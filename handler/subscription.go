@@ -16,20 +16,16 @@ type Page struct {
 }
 
 func HandlePage(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+
 	// Query result to the Youtube API
 	var page Page
 	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&mine=true")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	vidQuery := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?access_token=%v&channelId=UCC9mlCpyisiIpp9YA9xV-QA&part=snippet,id&maxResults=20", currentToken)
-
-	response2, err := http.Get(vidQuery)
-	defer response2.Body.Close()
-	content2, err := ioutil.ReadAll(response2.Body)
-	fmt.Printf("%#v",  string(content2))
-
 
 	// Range over response items
 	for _, p := range subscriptions.Items {
@@ -40,12 +36,20 @@ func HandlePage(w http.ResponseWriter, r *http.Request) {
 		page.AllSubscription = append(page.AllSubscription, c)
 	}
 
-	// Render results
-	t, err := getTemplateHTML("./html/page.html"); if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Fprintf(w, htmlHome)
-	t.Execute(w, page.AllSubscription)
+	//
+	//jsonBody, err := json.Marshal(results)
+	//if err != nil {
+	//	http.Error(w, "Error converting results to json",
+	//		http.StatusInternalServerError)
+	//}
+	//w.Write(jsonBody)
+
+	//// Render results
+	//t, err := getTemplateHTML("./html/videoSearch.html"); if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//fmt.Fprintf(w, htmlHome)
+	//t.Execute(w, page.AllSubscription)
 }
 
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -20,10 +21,24 @@ func StartWebServer() {
 	http.HandleFunc("/firstpage", HandlePage)
 	http.HandleFunc("/secondpage", HandleNextPage)
 	http.HandleFunc("/random", HandleRandom)
+	http.HandleFunc("/get", HandleGet)
+}
+func HandleGet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	results := "Hello Maxime"
+	jsonBody, err := json.Marshal(results)
+	if err != nil {
+		http.Error(w, "Error converting results to json",
+			http.StatusInternalServerError)
+	}
+	w.Write(jsonBody)
 }
 
 //HandleMain display home html
 func HandleMain(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+
 	fmt.Fprintf(w, htmlIndex)
 }
 

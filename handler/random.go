@@ -31,13 +31,16 @@ func HandleRandom(w http.ResponseWriter, r *http.Request) {
 	// For every channels IDs search for X video
 	for _, v := range allIDs {
 		vidQuery := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?access_token=%v&channelId=%v&part=snippet,id&maxResults=1", currentToken, v)
-		response2, _ := http.Get(vidQuery)
+		response2, err := http.Get(vidQuery); if err != nil {
+			fmt.Println(err.Error())
+		}
 		defer response2.Body.Close()
 		content2, _ := ioutil.ReadAll(response2.Body)
 		var videoSearch model.VideoSearch
 		err = json.Unmarshal(content2, &videoSearch); if err != nil {
 			fmt.Println(err.Error())
 		}
+		fmt.Fprintf(w, string(content2))
 
 		// For every videos, append payload to page.AllVideosFromUser object
 		for _, x := range videoSearch.Items {

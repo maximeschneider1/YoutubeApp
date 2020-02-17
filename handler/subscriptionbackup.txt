@@ -1,0 +1,144 @@
+package handler
+
+import (
+	"YSS/model"
+	"YSS/payload"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"io/ioutil"
+	"net/http"
+)
+
+type Page struct {
+	AllSubscription []*payload.User
+	AllNextSubscription []*payload.User
+	AllVideosFromUser []*payload.Video
+}
+
+func HandlePage(w http.ResponseWriter, r *http.Request) {
+	// Query result to the Youtube API
+	var page Page
+	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&mine=true", currentToken)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Range over response items
+	for _, p := range subscriptions.Items {
+		c := &payload.User{}
+		c, err = c.GetItemInfo(p); if err != nil {
+			fmt.Println(err.Error())
+		}
+		page.AllSubscription = append(page.AllSubscription, c)
+	}
+
+	//Handle next token page
+	http.HandleFunc(fmt.Sprintf("/%v", subscriptions.NextPageToken), Next)
+
+	fmt.Println("next token is", subscriptions.NextPageToken)
+
+	// Make post request to page
+	nextPageUrl := fmt.Sprintf("/%v", subscriptions.NextPageToken)
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", nextPageUrl, nil)
+	req.Header.Set("NextToken", subscriptions.NextPageToken)
+	res, _ := client.Do(req)
+	fmt.Println("resp is", res)
+
+
+	var htmlNextPage = fmt.Sprintf(`<html><body><a href="/%v">Next Page</a></body></html>`, subscriptions.NextPageToken)
+
+
+	// Render results
+	t, err := getTemplateHTML("./html/subs.html"); if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Fprintf(w, htmlHome)
+	t.Execute(w, page.AllSubscription)
+	fmt.Fprintf(w, htmlNextPage)
+}
+
+func Next(w http.ResponseWriter, r *http.Request) {
+	var page Page
+	switch r.Method {
+	case "GET":
+		NextPageToken := r.Header.Get("NextToken")
+
+		nextPageQuery := fmt.Sprintf("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&pageToken=%v&maxResults=10&mine=true", "", NextPageToken)
+		fmt.Println("NEXT PAGE QUERY LIGNE 69", nextPageQuery)
+		nextPageSubscription, err := querySubscription(nextPageQuery, currentToken)
+		fmt.Println(nextPageQuery)
+		if err != nil {
+			fmt.Println("ici")
+			fmt.Println(err.Error())
+		}
+		// Range over response items
+		for _, p := range nextPageSubscription.Items {
+			c := &payload.User{}
+			c, err = c.GetItemInfo(p); if err != nil {
+				fmt.Println(err.Error())
+			}
+			page.AllNextSubscription = append(page.AllNextSubscription, c)
+			fmt.Println(c.Name)
+		}
+		// Render results
+		t, err := getTemplateHTML("./html/subs.html"); if err != nil {
+		fmt.Println(err.Error())
+	}
+		fmt.Fprintf(w, htmlHome)
+		t.Execute(w, page.AllSubscription)
+	}
+}
+
+func HandleNextPage(w http.ResponseWriter, r *http.Request) {
+	var page Page
+	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&pageToken=CAoQAA&mine=true", currentToken)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	for _, p := range subscriptions.Items {
+
+		c := &payload.User{}
+
+		c, err := c.GetItemInfo(p); if err != nil {
+			fmt.Println(err.Error())
+		}
+		page.AllSubscription = append(page.AllSubscription, c)
+	}
+
+	t, err := getTemplateHTML("./html/subs.html"); if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Fprintf(w, htmlHome)
+	t.Execute(w, page.AllSubscription)
+}
+
+
+func getTemplateHTML(filePath string) (*template.Template, error) {
+	t, err := template.ParseFiles(filePath)
+	if err != nil {
+		return &template.Template{}, err
+	}
+	return t, nil
+}
+
+func querySubscription(query string, currentToken string) (model.SubscriptionResponse, error) {
+	queryBuild := fmt.Sprintf(query, currentToken)
+
+	fmt.Println("queryBuild", queryBuild)
+
+	response, err := http.Get(queryBuild); if err != nil {
+		return model.SubscriptionResponse{}, err
+	}
+	fmt.Println(response)
+
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	var result model.SubscriptionResponse
+	err = json.Unmarshal(contents, &result); if err != nil {
+		fmt.Println(err.Error())
+	}
+	return result, nil
+}

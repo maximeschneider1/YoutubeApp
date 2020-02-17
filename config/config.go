@@ -25,17 +25,18 @@ var (
 		RedirectURL:    "http://localhost:8081/GoogleCallback",
 		ClientID:     getConfig().Web.ClientID,
 		ClientSecret: getConfig().Web.ClientSecret,
-		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.profile",
+		Scopes:       []string{
+			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/youtube.readonly"},
 		Endpoint:     google.Endpoint,
 	}
-	googleSecretPath = "config/code_secret_client_139508597776-6903ekrtdtc041j9eebtsumcl2jglmf6.apps.googleusercontent.com.json"
+	googleSecretPath = "config/code_secret_client.json"
 	// Some random string, random for each request
 	OauthStateString = randState(7)
 )
 
-
+// randState returns a random string
 func randState(n int) string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	b := make([]rune, n)
@@ -46,7 +47,7 @@ func randState(n int) string {
 }
 
 
-
+// getConfig reads json client secret to return client ID and secret
 func getConfig() JsonFile {
 
 	jsonFile, err := os.Open(googleSecretPath); if err != nil {
