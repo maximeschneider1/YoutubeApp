@@ -6,18 +6,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
+	"time"
 )
 
-func HandleRandom(w http.ResponseWriter, r *http.Request) {
-	// Query result to the Youtube API
+func random(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+
 	var page Page
-	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=3&mine=true")
-	if err != nil {
+
+	// Build query
+	randomOrderForQuery := randomOrder()
+
+	baseQuery := "https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=50&order=%v&mine=true"
+	queryBuild := fmt.Sprintf(baseQuery, currentToken, randomOrderForQuery)
+
+	// Make query and unmarshall it
+	response, err := http.Get(queryBuild); if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	var subscriptions model.Payload
+	err = json.Unmarshal(contents, &subscriptions); if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	var allIDs []string
+	// Take the result
 	// Range over response items
 	for _, p := range subscriptions.Items {
 		c := &payload.User{}
@@ -25,40 +43,46 @@ func HandleRandom(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err.Error())
 		}
 		page.AllSubscription = append(page.AllSubscription, c)
-		allIDs = append(allIDs, c.ID)
 	}
 
-	// For every channels IDs search for X video
-	for _, v := range allIDs {
-		vidQuery := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?access_token=%v&channelId=%v&part=snippet,id&maxResults=1", currentToken, v)
-		response2, err := http.Get(vidQuery); if err != nil {
-			fmt.Println(err.Error())
-		}
-		defer response2.Body.Close()
-		content2, _ := ioutil.ReadAll(response2.Body)
-		var videoSearch model.VideoSearch
-		err = json.Unmarshal(content2, &videoSearch); if err != nil {
-			fmt.Println(err.Error())
-		}
-		fmt.Fprintf(w, string(content2))
+	winner := chooseItem2(page.AllSubscription)
 
-		// For every videos, append payload to page.AllVideosFromUser object
-		for _, x := range videoSearch.Items {
-			n := &payload.Video{
-				ID:        x.IDs.VideoID,
-				Title:     x.Snippet.Title,
-				URL:       fmt.Sprintf( `https://www.youtube.com/watch?v=%v`, x.IDs.VideoID),
-				Thumbnail: x.Snippet.Thumbnails.High.URL,
-				Author: x.Snippet.ChannelTitle,
-			}
-			page.AllVideosFromUser = append(page.AllVideosFromUser, n)
-		}
+	jsonBody, err := json.Marshal(winner)
+	if err != nil {
+		http.Error(w, "Error converting results to json",
+			http.StatusInternalServerError)
 	}
 
-	// Render results
-	t, err := getTemplateHTML("./html/videoSearch.html"); if err != nil {
-		fmt.Println(err.Error())
+	w.Write(jsonBody)
+}
+
+func chooseItem2(allUsers []*payload.User) *payload.User {
+	rand.Seed(time.Now().UnixNano())
+	min := 1
+	max := len(allUsers)
+	r := rand.Intn(max - min) + min
+
+	var winner *payload.User
+
+	winner = allUsers[r]
+
+	return winner
+}
+
+// randomOrder returns random order param for the request
+func randomOrder() string {
+	rand.Seed(time.Now().UnixNano())
+	//min := 1
+	//max := 4
+	r := rand.Intn(4)
+	if r == 1 {
+		return "alphabetical"
 	}
-	fmt.Fprintf(w, htmlHome)
-	t.Execute(w, page.AllVideosFromUser)
+	if r == 2 {
+		return "relevance"
+	}
+	if r == 3 {
+		return "unread"
+	}
+	return "alphabetical"
 }

@@ -1,0 +1,208 @@
+package handler
+
+import (
+	"YSS/model"
+	"YSS/payload"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"math/rand"
+	"time"
+)
+
+func HandleRandom(w http.ResponseWriter, r *http.Request) {
+	// Query result to the Youtube API
+	var page Page
+	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=3&mine=true")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	var allIDs []string
+	// Range over response items
+	for _, p := range subscriptions.Items {
+		c := &payload.User{}
+		c, err = c.GetItemInfo(p); if err != nil {
+			fmt.Println(err.Error())
+		}
+		page.AllSubscription = append(page.AllSubscription, c)
+		allIDs = append(allIDs, c.ID)
+	}
+
+	// For every channels IDs search for X video
+	for _, v := range allIDs {
+		vidQuery := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?access_token=%v&channelId=%v&part=snippet,id&maxResults=1", currentToken, v)
+		response2, err := http.Get(vidQuery); if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer response2.Body.Close()
+		content2, _ := ioutil.ReadAll(response2.Body)
+		var videoSearch model.VideoSearch
+		err = json.Unmarshal(content2, &videoSearch); if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Fprintf(w, string(content2))
+
+		// For every videos, append payload to page.AllVideosFromUser object
+		for _, x := range videoSearch.Items {
+			n := &payload.Video{
+				ID:        x.IDs.VideoID,
+				Title:     x.Snippet.Title,
+				URL:       fmt.Sprintf( `https://www.youtube.com/watch?v=%v`, x.IDs.VideoID),
+				Thumbnail: x.Snippet.Thumbnails.High.URL,
+				Author: x.Snippet.ChannelTitle,
+			}
+			page.AllVideosFromUser = append(page.AllVideosFromUser, n)
+		}
+	}
+
+	// Render results
+	t, err := getTemplateHTML("./html/videoSearch.html"); if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Fprintf(w, htmlHome)
+	t.Execute(w, page.AllVideosFromUser)
+}
+
+func TrueRandom(w http.ResponseWriter, r *http.Request) {
+	// Build query
+	baseQuery := "https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=2&order=%v&mine=true"
+	randomOrderForQuery := randomOrder()
+	queryBuild := fmt.Sprintf(baseQuery, currentToken, randomOrderForQuery)
+
+	// Make query and unmarshall it
+	response, err := http.Get(queryBuild); if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	var result model.Payload
+	err = json.Unmarshal(contents, &result); if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	if result.NextPageToken == "" {
+		// return 1 person
+		fmt.Println("YA PAS DE TOKEN AU PREMIER NIVEAU ")
+	}
+	var page Page
+	allUsers, newPage,  err := NextQuery(result.NextPageToken, result.Items, page); if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(allUsers)
+	fmt.Println(newPage)
+	fmt.Println("i'm out", len(allUsers))
+	fmt.Println("i'm out", len(newPage))
+
+	//_ = chooseItem(allUsers)
+
+
+
+
+	fmt.Fprintf(w, htmlHome)
+}
+func chooseItem(allUsers []*payload.User) *payload.User {
+	rand.Seed(time.Now().UnixNano())
+	min := 1
+	max := len(allUsers)
+	r := rand.Intn(max - min) + min
+
+	var winner *payload.User
+
+	winner = allUsers[r]
+
+	return winner
+}
+
+// NextQuery is a recursive function that, if a next query is possible,
+//have a 50% chance of doing the query, or return result
+func NextQuery(nextPageToken string, items []model.Item, page Page) ([]*payload.User, []*payload.User, error){
+
+	fmt.Println("la longeur de result.items AVANT", len(items))
+	//if next page token exist
+	if nextPageToken != "" && randomGo() == true {
+		fmt.Println("randomGo is true")
+		nextBaseQuery := "https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=2&pageToken=%v&mine=true"
+		nextQuery := fmt.Sprintf(nextBaseQuery, currentToken, nextPageToken)
+
+		nextResponse, err := http.Get(nextQuery); if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer nextResponse.Body.Close()
+		contents, err := ioutil.ReadAll(nextResponse.Body)
+		var result model.Payload
+		err = json.Unmarshal(contents, &result); if err != nil {
+			fmt.Println(err.Error())
+			return nil, nil, err
+		}
+
+		fmt.Printf("result.NextPageToken is %v", result.NextPageToken)
+		if result.NextPageToken == "" {
+			fmt.Println("///it is 0")
+			for _, p := range items {
+				c := &payload.User{}
+
+				c, err := c.GetItemInfo(p); if err != nil {
+					return nil, nil, err
+				}
+				page.AllSubscription = append(page.AllSubscription, c)
+				page.AllSubscription = append(page.AllSubscription, c)
+			}
+			fmt.Printf("VRAI et longueur%v",  page.AllSubscription)
+			return page.AllSubscription, page.AllSubscription, nil
+		}
+
+		fmt.Println("lauching next query")
+		_, _, err = NextQuery(result.NextPageToken, result.Items, page); if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		fmt.Println("randomGo is false")
+		fmt.Println("la longeur de result.items APRES", len(items))
+		//var newPage *Page
+		// return result
+		for _, p := range items {
+			c := &payload.User{}
+
+			c, err := c.GetItemInfo(p); if err != nil {
+				return nil, nil,  err
+			}
+			page.AllSubscription = append(page.AllSubscription, c)
+
+		}
+		fmt.Printf("ICI/////////////////// %v", page.AllSubscription)
+		return page.AllSubscription, page.AllSubscription,  nil
+	}
+	return nil, nil, nil
+}
+
+// randomOrder returns random order param for the request
+func randomOrder() string {
+	rand.Seed(time.Now().UnixNano())
+	//min := 1
+	//max := 4
+	r := rand.Intn(4)
+	if r == 1 {
+		return "alphabetical"
+	}
+	if r == 2 {
+		return "relevance"
+	}
+	if r == 3 {
+		return "unread"
+	}
+	return "alphabetical"
+}
+// randomGo has 50% chance of returning true
+func randomGo() bool {
+	rand.Seed(time.Now().UnixNano())
+	r := rand.Intn(2)
+	if r == 1 {
+		return true
+	}
+	if r == 2 {
+		return false
+	}
+	return false
+}

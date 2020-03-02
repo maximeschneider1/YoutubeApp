@@ -7,6 +7,7 @@ type Payload struct {
 	Etag          string `json:"etag"`
 	NextPageToken string `json:"nextPageToken"`
 	PrevPageToken string `json:"prevPageToken"`
+	PageInfos      PageInfo `json:"pageInfo"`
 	Items []Item `json:"items"`
 }
 
