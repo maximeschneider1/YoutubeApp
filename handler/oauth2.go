@@ -67,10 +67,17 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	cookie := http.Cookie{
 		Name:       "jwtToken",
 		Value:      validTokenJWT,
-		//Expires: expirationTime,
+		Expires: time.Now().Add(time.Minute * 30),
 	}
-
 	http.SetCookie(w, &cookie)
+
+	loggedCookie := http.Cookie{
+		Name:       "userLogged",
+		Value:      "true",
+		Expires: time.Now().Add(time.Minute * 30),
+	}
+	http.SetCookie(w, &loggedCookie)
+
 	http.Redirect(w, r, "http://localhost:8080", http.StatusTemporaryRedirect)
 }
 

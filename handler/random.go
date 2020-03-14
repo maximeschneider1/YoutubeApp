@@ -69,12 +69,16 @@ func chooseItem2(allUsers []*payload.User) *payload.User {
 	return winner
 }
 
+
 // randomOrder returns random order param for the request
 func randomOrder() string {
 	rand.Seed(time.Now().UnixNano())
 	//min := 1
 	//max := 4
 	r := rand.Intn(4)
+	if r == 0 {
+		randomOrder()
+	}
 	if r == 1 {
 		return "alphabetical"
 	}
