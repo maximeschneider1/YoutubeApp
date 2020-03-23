@@ -21,73 +21,6 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func HandleNextSubs(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, jwtToken, nextPageToken, prevPageToken")
-
-	if r.Method != "POST" {
-		return
-	}
-
-	decoder := json.NewDecoder(r.Body)
-
-	type myData struct {
-		Salut string
-	}
-
-	var data myData
-	err := decoder.Decode(&data)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	fmt.Println(data.Salut)
-}
-
-
-func QueryNext(w http.ResponseWriter, pageToken string, userOauthToken string) []byte {
-	// Query result to the Youtube API
-	var page Page
-	subscriptions, err := queryNextSubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", pageToken, userOauthToken)
-	if err != nil {
-		fmt.Println("error querying user subscriptions :", err.Error())
-	}
-	// Range over response items
-	for _, p := range subscriptions.Items {
-		c := &payload.User{}
-		c, err = c.GetItemInfo(p); if err != nil {
-			fmt.Println("Error retrieving items information :",err.Error())
-		}
-		page.AllSubscription = append(page.AllSubscription, c)
-	}
-
-	w.Header().Set("nextPageToken", subscriptions.NextPageToken)
-
-	type resp struct {
-		Subscriptions []*payload.User
-		NextPageToken string
-		PrevPageToken string
-		TotalResults int
-		ResultPerPage int
-	}
-
-	response := &resp{
-		Subscriptions: page.AllSubscription,
-		NextPageToken: subscriptions.NextPageToken,
-		PrevPageToken: subscriptions.PrevPageToken,
-		TotalResults: subscriptions.PageInfos.TotalResults,
-		ResultPerPage: subscriptions.PageInfos.ResultsPerPage,
-	}
-
-	jsonBody, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Error converting results to json",
-			http.StatusInternalServerError)
-	}
-	return jsonBody
-}
-
 func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -118,12 +51,12 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 	prevPageToken := r.Header.Get("prevPageToken")
 
 	if nextPageToken != "" {
-		jsonBody := QueryNext(w, userOauthToken, nextPageToken)
+		jsonBody := nextSubs(w, userOauthToken, nextPageToken)
 		w.Write(jsonBody)
 		return
 	}
 	if prevPageToken != "" {
-		jsonBody := QueryNext(w, userOauthToken, prevPageToken)
+		jsonBody := nextSubs(w, userOauthToken, prevPageToken)
 		w.Write(jsonBody)
 		return
 	}
@@ -133,7 +66,7 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 		// Query result to the Youtube API
 		var page Page
-		subscriptions, err := queryNextSubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", userOauthToken, prevPageToken)
+		subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", userOauthToken, prevPageToken)
 		if err != nil {
 			fmt.Println("error querying user subscriptions :", err.Error())
 		}
@@ -179,7 +112,7 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 		// Query result to the Youtube API
 		var page Page
-		subscriptions, err := queryNextSubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", userOauthToken, nextPageToken)
+		subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", userOauthToken, nextPageToken)
 		if err != nil {
 			fmt.Println("error querying user subscriptions :", err.Error())
 		}
@@ -223,7 +156,7 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 	// Query result to the Youtube API
 	var page Page
-	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&mine=true", userOauthToken)
+	subscriptions, err := querySubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&mine=true", userOauthToken)
 	if err != nil {
 		fmt.Println("error querying user subscriptions :", err.Error())
 	}
@@ -264,7 +197,29 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBody)
 }
 
-func queryNextSubscription(query string, oauthToken string, nextPageToken string) (model.Payload, error) {
+func HandleNextSubs(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, jwtToken, nextPageToken, prevPageToken")
+
+	if r.Method != "POST" {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+
+	type myData struct {
+		Salut string
+	}
+
+	var data myData
+	err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
+func queryNextSubs(query string, oauthToken string, nextPageToken string) (model.Payload, error) {
 	queryBuild := fmt.Sprintf(query, oauthToken, nextPageToken)
 
 	response, err := http.Get(queryBuild); if err != nil {
@@ -280,8 +235,7 @@ func queryNextSubscription(query string, oauthToken string, nextPageToken string
 	return result, nil
 }
 
-
-func querySubscription(query string, oauthToken string) (model.Payload, error) {
+func querySubs(query string, oauthToken string) (model.Payload, error) {
 	queryBuild := fmt.Sprintf(query, oauthToken)
 
 	response, err := http.Get(queryBuild); if err != nil {
@@ -297,9 +251,47 @@ func querySubscription(query string, oauthToken string) (model.Payload, error) {
 	return result, nil
 }
 
+func nextSubs(w http.ResponseWriter, pageToken string, userOauthToken string) []byte {
+	// Query result to the Youtube API
+	var page Page
+	subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", pageToken, userOauthToken)
+	if err != nil {
+		fmt.Println("error querying user subscriptions :", err.Error())
+	}
+	// Range over response items
+	for _, p := range subscriptions.Items {
+		c := &payload.User{}
+		c, err = c.GetItemInfo(p); if err != nil {
+			fmt.Println("Error retrieving items information :",err.Error())
+		}
+		page.AllSubscription = append(page.AllSubscription, c)
+	}
 
-// pour prendre les query params
-// new decoder req.body
+	w.Header().Set("nextPageToken", subscriptions.NextPageToken)
+
+	type resp struct {
+		Subscriptions []*payload.User
+		NextPageToken string
+		PrevPageToken string
+		TotalResults int
+		ResultPerPage int
+	}
+
+	response := &resp{
+		Subscriptions: page.AllSubscription,
+		NextPageToken: subscriptions.NextPageToken,
+		PrevPageToken: subscriptions.PrevPageToken,
+		TotalResults: subscriptions.PageInfos.TotalResults,
+		ResultPerPage: subscriptions.PageInfos.ResultsPerPage,
+	}
+
+	jsonBody, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Error converting results to json",
+			http.StatusInternalServerError)
+	}
+	return jsonBody
+}
 
 
 
@@ -318,7 +310,7 @@ func querySubscription(query string, oauthToken string) (model.Payload, error) {
 //
 //func HandleNextPage(w http.ResponseWriter, r *http.Request) {
 //	var page Page
-//	subscriptions, err := querySubscription("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&pageToken=CAoQAA&mine=true")
+//	subscriptions, err := querySubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=10&pageToken=CAoQAA&mine=true")
 //	if err != nil {
 //		fmt.Println(err.Error())
 //	}

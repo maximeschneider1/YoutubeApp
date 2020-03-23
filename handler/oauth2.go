@@ -55,7 +55,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	//  get user id = https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=
 	// verify if user id is known (or create it) and get user data
 	// put user data in jwt token
-	// send back jwt as cookie
+	// send back jwt as JWTcookie
 
 	userID := "Jean Michel"
 
@@ -64,12 +64,12 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Failed to generate token")
 	}
 
-	cookie := http.Cookie{
+	JWTcookie := http.Cookie{
 		Name:       "jwtToken",
 		Value:      validTokenJWT,
 		Expires: time.Now().Add(time.Minute * 30),
 	}
-	http.SetCookie(w, &cookie)
+	http.SetCookie(w, &JWTcookie)
 
 	loggedCookie := http.Cookie{
 		Name:       "userLogged",
