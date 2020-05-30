@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+
+
 type Page struct {
 	AllSubscription []*payload.User
 	AllVideosFromUser []*payload.Video
@@ -66,7 +68,7 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 		// Query result to the Youtube API
 		var page Page
-		subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", userOauthToken, prevPageToken)
+		subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=12&pageToken=%v&mine=true", userOauthToken, prevPageToken)
 		if err != nil {
 			fmt.Println("error querying user subscriptions :", err.Error())
 		}
@@ -112,7 +114,7 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 		// Query result to the Youtube API
 		var page Page
-		subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&pageToken=%v&mine=true", userOauthToken, nextPageToken)
+		subscriptions, err := queryNextSubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=12&pageToken=%v&mine=true", userOauthToken, nextPageToken)
 		if err != nil {
 			fmt.Println("error querying user subscriptions :", err.Error())
 		}
@@ -156,7 +158,7 @@ func HandleGetSubs(w http.ResponseWriter, r *http.Request) {
 
 	// Query result to the Youtube API
 	var page Page
-	subscriptions, err := querySubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=16&mine=true", userOauthToken)
+	subscriptions, err := querySubs("https://www.googleapis.com/youtube/v3/subscriptions?access_token=%v&part=snippet&maxResults=12&mine=true", userOauthToken)
 	if err != nil {
 		fmt.Println("error querying user subscriptions :", err.Error())
 	}

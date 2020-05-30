@@ -16,6 +16,8 @@ type server struct {
 	myDB *sql.DB
 }
 
+
+
 func main() {
 
 	db, err := config.ReturnDB(configPath); if err != nil {
