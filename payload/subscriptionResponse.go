@@ -1,7 +1,7 @@
 package payload
 
 import (
-	"YSS/model"
+	"YoutubeApp/model"
 	"fmt"
 )
 

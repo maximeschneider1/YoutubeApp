@@ -1,47 +1,35 @@
 package main
 
 import (
-	"YSS/config"
-	"YSS/handler"
+	"YoutubeApp/handler"
 	"fmt"
 	_ "github.com/lib/pq"
 	"database/sql"
 
 )
 
-var configPath = "/Users/max/go/src/YSS/config/DBconfig.json"
-var GlobalDB *sql.DB
 
-type server struct {
-	myDB *sql.DB
+type User struct {
+	ID int
 }
-
 
 
 func main() {
 
-	db, err := config.ReturnDB(configPath); if err != nil {
-		fmt.Println(err.Error())
-	}
-	GlobalDB = db
-
-	getUserInfo()
+	//getUserInfo()
 
 	fmt.Println("Starting Web Server...")
 	handler.StartWebServer()
 
 }
 
-type User struct {
-	ID int
-}
 
 func getUserInfo() User {
 	var userConnexion User
-	_, _, err := isUserInDB(GlobalDB, 1); if err != nil {
-		fmt.Println(err.Error())
-		// STOP
-	}
+	//_, _, err := isUserInDB(handler.GlobalDB, 1); if err != nil {
+	//	fmt.Println(err.Error())
+	//	// STOP
+	//}
 	return userConnexion
 
 	//if exist == true && userID != 0 {

@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"YSS/model"
-	"YSS/payload"
+	"YoutubeApp/model"
+	"YoutubeApp/payload"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
