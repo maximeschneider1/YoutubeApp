@@ -1,1 +1,1 @@
-web: bin/launcher
+web: bin/YoutubeApp
