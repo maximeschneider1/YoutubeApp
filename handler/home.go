@@ -8,6 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
+	"os"
 )
 
 
@@ -46,7 +47,7 @@ func StartWebServer() {
 
 	s.routes()
 
-	log.Fatal(http.ListenAndServe(":8081", s.router))
+	log.Fatal(http.ListenAndServe(":" + os.Getenv("PORT"), s.router))
 
 	//http.HandleFunc("/GoogleLogin", HandleGoogleLogin)
 	//http.HandleFunc("/GoogleCallback", HandleGoogleCallback)
