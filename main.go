@@ -5,7 +5,8 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"database/sql"
-
+	"log"
+	"os"
 )
 
 
@@ -17,6 +18,8 @@ type User struct {
 func main() {
 
 	//getUserInfo()
+
+	log.Println("VARIABLE XXXXXXXXXXXXX TEST", os.Getenv("MAXIME"))
 
 	fmt.Println("Starting Web Server...")
 	handler.StartWebServer()

@@ -19,12 +19,11 @@ type (
 		ClientSecret string `json:"client_secret"`
 	}
 )
-
 var (
 	GoogleOauthConfig = &oauth2.Config{
 		RedirectURL:    "http://localhost:8081/GoogleCallback",
-		ClientID:     getConfig().Web.ClientID,
-		ClientSecret: getConfig().Web.ClientSecret,
+		ClientID:     os.Getenv("CLIENTID"),
+		ClientSecret: os.Getenv("CLIENTSECRET"),
 		Scopes:       []string{
 			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/userinfo.email",
